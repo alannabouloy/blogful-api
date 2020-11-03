@@ -43,24 +43,41 @@ articlesRouter
 
 articlesRouter
   .route('/:article_id')
-  .get((req, res, next) => {
-    const knexInstance = req.app.get('db')
-    ArticlesService.getById(knexInstance, req.params.article_id)
+  .all((req, res, next) => {
+      ArticlesService.getById(
+          req.app.get('db'),
+          req.params.article_id
+      )
       .then(article => {
-        if (!article) {
-          return res.status(404).json({
-            error: { message: `Article doesn't exist` }
-          })
-        }
-        res.json({
-            id: article.id,
-            style: article.style,
-            title: xss(article.title),
-            content: xss(article.content),
-            date_published: article.date_published,
-        })
+          if(!article) {
+              return res.status(404).json({
+                  error: { message: `Article Not Found` }
+              })
+          }
+          res.article = article
+          next()
       })
       .catch(next)
+  })
+  .get((req, res, next) => {
+        res.json({
+            id: res.article.id,
+            style: res.article.style,
+            title: xss(res.article.title),
+            content: xss(res.article.content),
+            date_published: res.article.date_published,
+        })
+  })
+  .delete((req, res, next) => {
+      const knexInstance = req.app.get('db')
+      ArticlesService.deleteArticle(
+          knexInstance, 
+          req.params.article_id
+        )
+        .then(() => {
+            res.status(204).end()
+        })
+        .catch(next)
   })
 
 module.exports = articlesRouter

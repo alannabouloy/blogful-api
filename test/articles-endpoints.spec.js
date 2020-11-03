@@ -151,5 +151,40 @@ describe('Article Endpoints', function() {
             })
         })
     })
-         
+    
+    describe.only(`DELETE /articles/:article_id`, () => {
+        context('Given there are articles in the database', () => {
+            const testArticles = makeArticlesArray()
+
+            beforeEach('insert articles', () => {
+                return db
+                    .into('blogful_articles')
+                    .insert(testArticles)
+            })
+
+            it(`responds with 204 and removes the article`, () => {
+                const idToRemove = 2
+                const expectedArticles = testArticles.filter(article => article.id !== idToRemove)
+                return supertest(app)
+                    .delete(`/articles/${idToRemove}`)
+                    .expect(204)
+                    .then(res => 
+                        supertest(app)
+                            .get(`/articles`)
+                            .expect(200, expectedArticles)
+                    )
+            })
+        })
+
+        context('Given there are no articles', () => {
+            it(`responds with a 404 and an error message`, () => {
+                const idToRemove = 12345
+                return supertest(app)
+                    .delete(`/articles/${idToRemove}`)
+                    .expect(404, {
+                        error: { message: 'Article Not Found'}
+                    })
+            })
+        })
+    })
 })
