@@ -76,9 +76,33 @@ describe('Article Endpoints', function() {
                     .expect(404, {error: {message: `Article doesn't exist`}})
             })
         }) 
+        context(`Given an XSS attack article`, () => {
+            const maliciousArticle = {
+                id: 911,
+                title: 'Naughty naughty very naughty <script>alert("xss");</script>',
+                style: 'How-to',
+                content: `Bad image <img src="https://url.to.file.which/does-not.exist" onerror="alert(document.cookie);">. But not <strong>all</strong>bad.`
+            }
+
+            beforeEach('insert malicious article', () => {
+                return db
+                    .into('blogful_articles')
+                    .insert([maliciousArticle])
+            })
+
+            it('removes XSS attack content', () => {
+                return supertest(app)
+                    .get(`/articles/${maliciousArticle.id}`)
+                    .expect(200)
+                    .expect(res => {
+                        expect(res.body.title).to.eql('Naughty naughty very naughty &lt;script&gt;alert(\"xss\");&lt;/script&gt;')
+                        expect(res.body.content).to.eql(`Bad image <img src="https://url.to.file.which/does-not.exist">. But not <strong>all</strong>bad.`)
+                    })
+            })
+        })
     })
 
-    describe.only(`POST /articles`, () => {
+    describe(`POST /articles`, () => {
         it('creates an article, responding with 201 and the new article created', function() {
             this.retries(3)
             const newArticle = {
